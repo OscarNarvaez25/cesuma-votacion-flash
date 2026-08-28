@@ -2,5 +2,8 @@
   "name": "cesuma-votacion-flash",
   "version": "1.0.0",
   "private": true,
-  "description": "Votación en vivo, sin login, para nombrar el ritual del Flash de Operaciones (Consejo CESUMA)."
-} 
+  "description": "Votación en vivo, sin login, para nombrar el ritual del Flash de Operaciones (Consejo CESUMA).",
+  "dependencies": {
+    "@upstash/redis": "^1.0.0"
+  }
+}
