@@ -1,38 +1,39 @@
-// Serverless function (Vercel "Other"/zero-config: any file under /api
-// becomes a function automatically, Node.js runtime, no build step needed).
-//
-// Keeps vote counts in memory for the life of the warm serverless instance.
+const { Redis } = require("@upstash/redis");
 
 const OPTIONS = ["flash", "alineacion", "status"];
+const KEY = "cesuma_vote_counts";
 
-if (!globalThis.__cesumaVoteCounts) {
-  globalThis.__cesumaVoteCounts = { flash: 0, alineacion: 0, status: 0 };
+const redis = Redis.fromEnv();
+
+async function getCounts() {
+  const counts = await redis.hgetall(KEY);
+  const result = { flash: 0, alineacion: 0, status: 0 };
+  if (counts) {
+    for (const k of OPTIONS) result[k] = Number(counts[k] || 0);
+  }
+  return result;
 }
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method === "GET") {
-    res.status(200).json(globalThis.__cesumaVoteCounts);
+    res.status(200).json(await getCounts());
     return;
   }
 
   if (req.method === "POST") {
     let body = req.body;
     if (typeof body === "string") {
-      try {
-        body = JSON.parse(body);
-      } catch (e) {
-        body = {};
-      }
+      try { body = JSON.parse(body); } catch (e) { body = {}; }
     }
     const option = body && body.option;
     if (!OPTIONS.includes(option)) {
       res.status(400).json({ error: "invalid option" });
       return;
     }
-    globalThis.__cesumaVoteCounts[option] += 1;
-    res.status(200).json(globalThis.__cesumaVoteCounts);
+    await redis.hincrby(KEY, option, 1);
+    res.status(200).json(await getCounts());
     return;
   }
 
